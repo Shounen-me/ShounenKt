@@ -6,14 +6,14 @@
 ```gradle
 allprojects {
   repositories {
-  ...
-  maven { url 'https://jitpack.io' }
+  	...
+  	maven { url 'https://jitpack.io' }
   }
 }
 ```
 ```gradle
 dependencies {
-  implementation 'com.github.manuelkour:ShounenKt:master-SNAPSHOT'
+ 	implementation 'com.github.manuelkour:ShounenKt:master-SNAPSHOT'
 }
 ```
 
@@ -49,10 +49,10 @@ client.postUser("166883258200621056", "Asuha")
 ### Add anime to a user's personal anime list
 ```kotlin
 val client = ShounenClient("abcxyz") 
-client.postUser("166883258200621056", "One Piece") 
+client.addAnime("166883258200621056", "One Piece") 
 // --> If the list was empty before: client.getUser("166883258200621056").animeList = ["One Piece"]
 ``` 
 
 ## To-Do's
 - [ ] Add setProfilePicture functionality
-- [ ] Implement new features from API (MAL/Kitsu Account Sync)
+- [ ] Implement new features from API (MAL/Kitsu Account Sync and some other stuff that's coming soon)
