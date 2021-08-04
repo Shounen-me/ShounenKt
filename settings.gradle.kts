@@ -1,2 +1,2 @@
-rootProject.name = "Shounen4J"
+rootProject.name = "ShounenKt"
 

@@ -25,7 +25,7 @@ publishing {
     publications {
         create<MavenPublication>("maven") {
             groupId = "com.github.manuelkour"
-            artifactId = "Shounen4J"
+            artifactId = "ShounenKt"
             version = "0.1"
 
             from(components["java"])
