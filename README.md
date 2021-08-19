@@ -46,13 +46,19 @@ val profilePicture = client.getUser("Asuha").profilePicture
 val client = ShounenClient("abcxyz") 
 client.postUser("166883258200621056", "Asuha")
 ```
-### Add anime to a user's personal anime list
+
+### Sync user's MAL profile to the API
+```kotlin
+val val client = ShounenClient("abcxyz") 
+client.malSync("166883258200621056") 
+// --> Returns redirect link to MAL authorization page for the user
+```
+### Add anime to a user's anime list on MAL 
 ```kotlin
 val client = ShounenClient("abcxyz") 
-client.addAnime("166883258200621056", "One Piece") 
-// --> If the list was empty before: client.getUser("166883258200621056").animeList = ["One Piece"]
+client.postAnime("166883258200621056", "44074", 11) 
 ``` 
 
 ## To-Do's
 - [ ] Add setProfilePicture functionality
-- [ ] Implement new features from API (MAL/Kitsu Account Sync and some other stuff that's coming soon)
+- [ ] Add getAnime/getManga functionality
