@@ -4,16 +4,18 @@ import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 
-open class ShounenClient(val token: String) {
+open class ShounenClient(private val token: String) {
 
     /**
      * Gets a user from the API
      * @param searchParameter = Discord ID or user name (with which the user is registered in the API)
      * @return User
      */
-    open fun getUser(searchParameter: String?): User? {
+    open fun getUser(searchParameter: String): User? {
         try {
-            val con = getConnection(searchParameter, "GET", "user")
+            val con = if (searchParameter.toLongOrNull() == null)
+                getUserConnection(Request.GET, name = searchParameter)
+            else getUserConnection(Request.GET, id = searchParameter)
             val reader = BufferedReader(InputStreamReader(con!!.inputStream))
             val json = JSONObject(reader.readLine())
             return User(
@@ -37,7 +39,7 @@ open class ShounenClient(val token: String) {
      */
     open fun postUser(user: User): Boolean {
         try {
-            val con = getConnection(String.format("%s/%s", user.id, user.userName), "POST", "user")
+            val con = getUserConnection(Request.POST, user.id, user.userName)
             con!!.connect()
             return con.responseCode == 201
         } catch (ignored: Exception) {
@@ -48,15 +50,32 @@ open class ShounenClient(val token: String) {
 
     /**
      * Adds specified anime to a user's anime list
-     * @param id = Discord ID
-     * @param name = name of the anime (whitespaces will be seperated by '+', e.g. One Piece = One+Piece)
+     * @param discordID = Discord ID
+     * @param id = unique ID of the anime on MAL
+     * @param episodes = count of episodes watched
      * @return boolean: true if anime was added successfully, false if not
      */
-    open fun addAnime(id: String?, name: String): Boolean {
+    open fun postAnime(discordID: String?, id: String, episodes: Int): Boolean {
         try {
-            var anime = name
-            anime = anime.trim { it <= ' ' }.replace(" ", "+")
-            val con = getConnection(String.format("%s/anime/%s", id, anime), "POST", "user")
+            val con = getMALConnection("anime", Request.POST, discordID, id, count = episodes)
+            con!!.connect()
+            return con.responseCode == 200
+        } catch (ignored: Exception) {
+        }
+        return false
+    }
+
+    /**
+     * Adds specified manga to a user's manga list
+     * @param discordID = Discord ID
+     * @param id = unique ID of the anime on MAL
+     * @param chapters = count of chapters read -> optional
+     * @return boolean: true if anime was added successfully, false if not
+     */
+    open fun postManga(discordID: String?, id: String, chapters: Int = 0): Boolean {
+        try {
+            val con = if (chapters != 0) getMALConnection("manga", Request.POST, discordID, id, count = chapters)
+            else getMALConnection("manga", Request.POST, discordID, id)
             con!!.connect()
             return con.responseCode == 200
         } catch (ignored: Exception) {
@@ -72,7 +91,7 @@ open class ShounenClient(val token: String) {
      */
     open fun deleteUser(id: String?): Boolean {
         try {
-            val con = getConnection(id, "DELETE", "user")
+            val con = getUserConnection(Request.DELETE, id)
             con!!.connect()
             return con.responseCode == 200
         } catch (ignored: java.lang.Exception) {
@@ -84,35 +103,57 @@ open class ShounenClient(val token: String) {
     /**
      * Initiates the sync process of a user to the MAL API (to sync their account with the shounen.me API)
      * @param id = Discord ID
-     * @return MutableList<String>: [0] contains verifier (to be stored), [1] contains the link to the redirect
+     * @return String: Redirect link for MAL authorization
      */
-    open fun malSync(id: String): MutableList<String> {
+    open fun malSync(id: String): String {
         try {
-            val con = getConnection(id, "GET", "mal")
+            val con = getMALConnection("sync", Request.GET, discordID = id)
+            if (con != null) {
+                println(con.requestMethod)
+            }
             con!!.connect()
-            val response = con.responseMessage
-            val params = mutableListOf<String>()
-            params.add(response.split(",")[0])
-            params.add(response.split(",")[1])
-            return params
+            return BufferedReader(InputStreamReader(con.inputStream)).readLine()
         } catch (ignored: Exception) {}
-        return mutableListOf()
+        return ""
     }
 
 
 
-    /**
-     * Gets Http Connection
-     * @param s = {name/id} + optional /profile, /anime, ...
-     * @param request = GET, POST or DELETE
-     * @param endpoint = 'user' or 'mal'
-     * @return boolean: false if user already exists, true if User was successfully stored in the API
-     */
-    open fun getConnection(s: String?, request: String?, endpoint: String?): HttpURLConnection? {
+    private fun getUserConnection(request: Request, id: String? = "", name: String? = "", profilePicture: String = ""):
+            HttpURLConnection? {
         try {
-            val url = URL(String.format("https://shounen.asuha.dev/%s/%s/%s", endpoint, token, s))
+            val url = when (request) {
+                Request.POST -> {
+                    if (profilePicture == "")
+                        URL( Urls.localhost + "/user/$token/$id/$name")
+                    else
+                        URL(Urls.localhost + "/user/profile/$token/$id")
+                }
+                Request.GET -> {
+                    if (id == "")
+                        URL(Urls.localhost + "/user/$name")
+                    else
+                        URL(Urls.localhost + "/user/$id")
+                }
+                Request.DELETE -> URL(Urls.localhost + "user/$id")
+            }
             val con = url.openConnection() as HttpURLConnection
-            con.requestMethod = request
+            con.requestMethod = request.toString()
+            return con
+        } catch (ignored: Exception) { }
+        return null
+    }
+
+    private fun getMALConnection(query: String, request: Request, discordID: String? = "", id: String? = "", info_type: String? = "", count: Int = 0): HttpURLConnection? {
+        try {
+            val url: URL = when(query) {
+                "sync" -> URL(Urls.localhost + "mal/sync/$discordID/init")
+                "info" -> URL(Urls.localhost + "mal/info/$discordID/$info_type/$id")
+                "anime" -> URL(Urls.localhost + "mal/anime/$token/$discordID/$id/$count")
+                else -> URL(Urls.localhost + "mal/manga/$token/$discordID/$id/$count")
+            }
+            val con = url.openConnection() as HttpURLConnection
+            con.requestMethod = request.toString()
             return con
         } catch (ignored: Exception) { }
         return null
