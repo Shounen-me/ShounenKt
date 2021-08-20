@@ -14,8 +14,8 @@ open class ShounenClient(private val token: String) {
     open fun getUser(searchParameter: String): User? {
         try {
             val con = if (searchParameter.toLongOrNull() == null)
-                getUserConnection(Request.GET, name = searchParameter)
-            else getUserConnection(Request.GET, id = searchParameter)
+                getUserConnection(Request_Types.GET, name = searchParameter)
+            else getUserConnection(Request_Types.GET, id = searchParameter)
             val reader = BufferedReader(InputStreamReader(con!!.inputStream))
             val json = JSONObject(reader.readLine())
             return User(
@@ -39,7 +39,7 @@ open class ShounenClient(private val token: String) {
      */
     open fun postUser(user: User): Boolean {
         try {
-            val con = getUserConnection(Request.POST, user.id, user.userName)
+            val con = getUserConnection(Request_Types.POST, user.id, user.userName)
             con!!.connect()
             return con.responseCode == 201
         } catch (ignored: Exception) {
@@ -57,7 +57,7 @@ open class ShounenClient(private val token: String) {
      */
     open fun postAnime(discordID: String?, id: String, episodes: Int): Boolean {
         try {
-            val con = getMALConnection("anime", Request.POST, discordID, id, count = episodes)
+            val con = getMALConnection("anime", Request_Types.POST, discordID, id, count = episodes)
             con!!.connect()
             return con.responseCode == 200
         } catch (ignored: Exception) {
@@ -74,8 +74,8 @@ open class ShounenClient(private val token: String) {
      */
     open fun postManga(discordID: String?, id: String, chapters: Int = 0): Boolean {
         try {
-            val con = if (chapters != 0) getMALConnection("manga", Request.POST, discordID, id, count = chapters)
-            else getMALConnection("manga", Request.POST, discordID, id)
+            val con = if (chapters != 0) getMALConnection("manga", Request_Types.POST, discordID, id, count = chapters)
+            else getMALConnection("manga", Request_Types.POST, discordID, id)
             con!!.connect()
             return con.responseCode == 200
         } catch (ignored: Exception) {
@@ -91,7 +91,7 @@ open class ShounenClient(private val token: String) {
      */
     open fun deleteUser(id: String?): Boolean {
         try {
-            val con = getUserConnection(Request.DELETE, id)
+            val con = getUserConnection(Request_Types.DELETE, id)
             con!!.connect()
             return con.responseCode == 200
         } catch (ignored: java.lang.Exception) {
@@ -107,7 +107,7 @@ open class ShounenClient(private val token: String) {
      */
     open fun malSync(id: String): String {
         try {
-            val con = getMALConnection("sync", Request.GET, discordID = id)
+            val con = getMALConnection("sync", Request_Types.GET, discordID = id)
             if (con != null) {
                 println(con.requestMethod)
             }
@@ -119,32 +119,32 @@ open class ShounenClient(private val token: String) {
 
 
 
-    private fun getUserConnection(request: Request, id: String? = "", name: String? = "", profilePicture: String = ""):
+    private fun getUserConnection(requestTypes: Request_Types, id: String? = "", name: String? = "", profilePicture: String = ""):
             HttpURLConnection? {
         try {
-            val url = when (request) {
-                Request.POST -> {
+            val url = when (requestTypes) {
+                Request_Types.POST -> {
                     if (profilePicture == "")
                         URL( Urls.localhost + "/user/$token/$id/$name")
                     else
                         URL(Urls.localhost + "/user/profile/$token/$id")
                 }
-                Request.GET -> {
+                Request_Types.GET -> {
                     if (id == "")
                         URL(Urls.localhost + "/user/$name")
                     else
                         URL(Urls.localhost + "/user/$id")
                 }
-                Request.DELETE -> URL(Urls.localhost + "user/$id")
+                Request_Types.DELETE -> URL(Urls.localhost + "user/$id")
             }
             val con = url.openConnection() as HttpURLConnection
-            con.requestMethod = request.toString()
+            con.requestMethod = requestTypes.toString()
             return con
         } catch (ignored: Exception) { }
         return null
     }
 
-    private fun getMALConnection(query: String, request: Request, discordID: String? = "", id: String? = "", info_type: String? = "", count: Int = 0): HttpURLConnection? {
+    private fun getMALConnection(query: String, requestTypes: Request_Types, discordID: String? = "", id: String? = "", info_type: String? = "", count: Int = 0): HttpURLConnection? {
         try {
             val url: URL = when(query) {
                 "sync" -> URL(Urls.localhost + "mal/sync/$discordID/init")
@@ -153,7 +153,7 @@ open class ShounenClient(private val token: String) {
                 else -> URL(Urls.localhost + "mal/manga/$token/$discordID/$id/$count")
             }
             val con = url.openConnection() as HttpURLConnection
-            con.requestMethod = request.toString()
+            con.requestMethod = requestTypes.toString()
             return con
         } catch (ignored: Exception) { }
         return null
